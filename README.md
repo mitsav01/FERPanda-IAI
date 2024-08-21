@@ -66,19 +66,21 @@ It is strongly recommended to setup realtime kernel in order to work with Franka
     curl -SLO https://www.kernel.org/pub/linux/kernel/v6.x/linux-6.8.2.tar.xz
     curl -SLO https://www.kernel.org/pub/linux/kernel/projects/rt/6.8/patch-6.8.2-rt11.patch.xz
     ```
-   Now, Decompress source files using following command,
+    Now, Decompress source files using following command,
    
     ```bash
-     xz -d *.xz
+    xz -d *.xz
     ```
 
 4. Compiling the Kernel
   Once you are sure the files were downloaded properly, you can extract the source code and apply the patch:
-```bash
-  tar xf linux-*.tar
-  cd linux-*/
-  patch -p1 < ../patch-*.patch
- ``` 
+ 
+   ```bash
+   tar xf linux-*.tar
+   cd linux-*/
+   patch -p1 < ../patch-*.patch
+   ``` 
+
 
 ## Installation
 
