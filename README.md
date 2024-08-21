@@ -7,12 +7,15 @@ Welcome to the GitHub repository for configuring the Franka Emika Panda robot fo
 
 1. [Overview](#overview)
 2. [Prerequisites](#prerequisites)
-3. [Installation](#installation)
-4. [Usage](#usage)
-5. [Examples](#examples)
-6. [Troubleshooting](#troubleshooting)
+    1. [Network Requirements](#network)
+    2. [Realtime Kernel Setup](#rtkernel)
+    3. [CPU Requirements](#cpuscaling)
+4. [Installation](#installation)
+5. [Usage](#usage)
+6. [Examples](#examples)
+7. [Troubleshooting](#troubleshooting)
 
-## Overview
+## 1. Overview
 
 This repository is dedicated to setting up and configuring the Franka Emika Panda arm for use with ROS2.
 The Franka Emika Panda robot is a 7-axis robot arm, it offers a 3 kg payload and 850 mm of reach. The repeatability of the Franka Emika Panda robot is 0.1 mm and the robot weight is approximately 18 kg.
@@ -20,7 +23,7 @@ Common applications of the Franka Emika Panda include: Dispensing, Remote TCP, W
 
 In order to work with ROS2 in Panda arm, we need to make sure that FCI(Franka Control Interface) mode is activated. The Franka Control Interface (FCI) offers a rapid and direct low-level bidirectional link to the Arm and Hand. It supplies the robot's current status and allows for direct control from an external workstation PC connected via Ethernet.
 
-## Prerequisites
+## 2. Prerequisites
 
 The given repo was implemented and tested on system with following specifications:
 
@@ -39,6 +42,43 @@ Given that the robot transmits data at a frequency of 1 kHz, it's crucial to con
 
 It is advised to connect your Workstation PC directly to the base of Panda arm and avoid any intermediate device (e.g. Network Switch) as such indirect connection can lead to delay, jitter and packet loss.
 
+# Realtime Kernel Setup
+
+It is strongly recommended to setup realtime kernel in order to work with Franka Emika Panda arm. Here, Steps are given to set realtime kernel to workstation PC.
+
+1. Install dependencies
+
+   ```bash
+   sudo apt-get install build-essential bc curl ca-certificates gnupg2 libssl-dev lsb-release libelf-dev bison flex dwarves zstd libncurses-dev
+   ```
+2. Decide which kernel version to use. It is advised to choose the kernel version which is closest to your current kernel version.
+
+   To find kernel version you are using currently, use following command:
+
+   ```bash
+   uname -r
+   ```
+ 3. Now, check for realtime patches available for selected kernel version, check [here](https://www.kernel.org/pub/linux/kernel/projects/rt/).
+
+    Go to the folder where you want to download source files for Kernel. Let's download source files using **curl**,
+    
+    ```bash
+    curl -SLO https://www.kernel.org/pub/linux/kernel/v6.x/linux-6.8.2.tar.xz
+    curl -SLO https://www.kernel.org/pub/linux/kernel/projects/rt/6.8/patch-6.8.2-rt11.patch.xz
+    ```
+   Now, Decompress source files using following command,
+   
+    ```bash
+     xz -d *.xz
+    ```
+
+4. Compiling the Kernel
+  Once you are sure the files were downloaded properly, you can extract the source code and apply the patch:
+```bash
+  tar xf linux-*.tar
+  cd linux-*/
+  patch -p1 < ../patch-*.patch
+ ``` 
 
 ## Installation
 
