@@ -38,11 +38,11 @@ Given that the robot transmits data at a frequency of 1 kHz, it's crucial to con
 
 **libfranka** or C++ implementation for client side of FCI, it establishes network communication with Control and its API documentation is available on [here.](https://frankaemika.github.io/libfranka/)
 
-# Network
+# Network*
 
 It is advised to connect your Workstation PC directly to the base of Panda arm and avoid any intermediate device (e.g. Network Switch) as such indirect connection can lead to delay, jitter and packet loss.
 
-# Realtime Kernel Setup
+# Realtime Kernel Setup*
 
 It is strongly recommended to setup realtime kernel in order to work with Franka Emika Panda arm. Here, Steps are given to set realtime kernel to workstation PC.
 
@@ -149,4 +149,4 @@ If you encounter any issues, please refer to the following resources:
 
 
 
-** This readme file is still in progress.
+* This readme file is still in progress.
