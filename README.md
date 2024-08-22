@@ -49,7 +49,8 @@ It is strongly recommended to setup realtime kernel in order to work with Franka
 1. Install dependencies
 
    ```bash
-   sudo apt-get install build-essential bc curl ca-certificates gnupg2 libssl-dev lsb-release libelf-dev bison flex dwarves zstd libncurses-dev
+   sudo apt-get build-dep linux
+   sudo apt-get install libncurses-dev flex bison openssl libssl-dev dkms libelf-dev libudev-dev libpci-dev libiberty-dev autoconf fakeroot
    ```
 2. Decide which kernel version to use. It is advised to choose the kernel version which is closest to your current kernel version.
 
@@ -80,8 +81,53 @@ It is strongly recommended to setup realtime kernel in order to work with Franka
    cd linux-*/
    patch -p1 < ../patch-*.patch
    ``` 
+5. Make a new .config file and copy old configuration.
+   
+   ```bash
+    cp /boot/config-5.4.0-54-generic .config
+    yes '' | make oldconfig
+   ```
+   Then we need to enable rt_preempt in the kernel with:
 
-
+   ```bash
+    make menuconfig
+   ```
+   In a pop-up window, set the following.
+   ```
+    # Enable CONFIG_PREEMPT_RT
+     -> General Setup
+      -> Preemption Model (Fully Preemptible Kernel (Real-Time))
+       (X) Fully Preemptible Kernel (Real-Time)
+    
+    # Enable CONFIG_HIGH_RES_TIMERS
+     -> General setup
+      -> Timers subsystem
+       [*] High Resolution Timer Support
+    
+    # Enable CONFIG_NO_HZ_FULL
+     -> General setup
+      -> Timers subsystem
+       -> Timer tick handling (Full dynticks system (tickless))
+        (X) Full dynticks system (tickless)
+    
+    # Set CONFIG_HZ_1000 (note: this is no longer in the General Setup menu, go back twice)
+     -> Processor type and features
+      -> Timer frequency (1000 HZ)
+       (X) 1000 HZ
+    
+    # Set CPU_FREQ_DEFAULT_GOV_PERFORMANCE [=y]
+     ->  Power management and ACPI options
+      -> CPU Frequency scaling
+       -> CPU Frequency scaling (CPU_FREQ [=y])
+        -> Default CPUFreq governor (<choice> [=y])
+         (X) performance
+    ```
+ In the end, Save and exit the given .config fil and build the kernel which will take around 30-45 minutes.
+    
+   ```bash
+     make - `nproc`
+   ```
+ 
 ## Installation
 
 Follow these steps to install the necessary packages and dependencies:
