@@ -36,7 +36,7 @@ The given repo was implemented and tested on system with following specification
   
 Given that the robot transmits data at a frequency of 1 kHz, it's crucial to configure the workstation PC to minimize latencies. For instance, we recommend ['disabling CPU frequency scaling'](https://frankaemika.github.io/docs/troubleshooting.html#disabling-cpu-frequency-scaling). Other potential optimizations will vary based on your specific system.
 
-**libfranka** or C++ implementation for client side of FCI, it establishes network communication with Control and its API documentation is available on [here.](https://frankaemika.github.io/libfranka/)
+`libfranka` or C++ implementation for client side of FCI, it establishes network communication with Control and its API documentation is available on [here.](https://frankaemika.github.io/libfranka/)
 
 # Network*
 
@@ -59,7 +59,7 @@ It is strongly recommended to setup realtime kernel in order to work with Franka
    ```bash
    uname -r
    ```
- 3. Now, check for realtime patches available for selected kernel version, check [here](https://www.kernel.org/pub/linux/kernel/projects/rt/).
+3. Now, check for realtime patches available for selected kernel version, check [here](https://www.kernel.org/pub/linux/kernel/projects/rt/).
 
     Go to the folder where you want to download source files for Kernel. Let's download source files using **curl**,
     
@@ -67,6 +67,7 @@ It is strongly recommended to setup realtime kernel in order to work with Franka
     curl -SLO https://www.kernel.org/pub/linux/kernel/v6.x/linux-6.8.2.tar.xz
     curl -SLO https://www.kernel.org/pub/linux/kernel/projects/rt/6.8/patch-6.8.2-rt11.patch.xz
     ```
+
     Now, Decompress source files using following command,
    
     ```bash
@@ -84,13 +85,13 @@ It is strongly recommended to setup realtime kernel in order to work with Franka
 5. Make a new .config file and copy old configuration.
    
    ```bash
-    cp /boot/config-5.4.0-54-generic .config
-    yes '' | make oldconfig
+   cp /boot/config-5.4.0-54-generic .config
+   yes '' | make oldconfig
    ```
    Then we need to enable rt_preempt in the kernel with:
 
    ```bash
-    make menuconfig
+   make menuconfig
    ```
    In a pop-up window, set the following.
    ```
@@ -122,12 +123,63 @@ It is strongly recommended to setup realtime kernel in order to work with Franka
         -> Default CPUFreq governor (<choice> [=y])
          (X) performance
     ```
- In the end, Save and exit the given .config fil and build the kernel which will take around 30-45 minutes.
+    In the end, Save and exit the given .config fil and build the kernel which will take around 30-45 minutes.
     
+    ```bash
+    make - `nproc`
+    ```
+    ---
+    **NOTE:** At the time of compilation, if you get the following error:
+        
+    ```bash
+    make[4]: *** No rule to make target 'debian/canonical-certs.pem', needed by 'certs/x509_certificate_list'.  Stop.
+    ```
+
+    You can solve it by making following changes in .config file   
+    ```bash 
+    CONFIG_SYSTEM_TRUSTED_KEYS="debian/canonical-certs.pem"
+    CONFIG_SYSTEM_REVOCATION_KEYS="debian/canonical-revoked-certs.pem"
+    CONFIG_DEBUG_INFO_BTF=y
+    ```
+    with, 
+    ```bash
+    CONFIG_SYSTEM_TRUSTED_KEYS=""  
+    CONFIG_SYSTEM_REVOCATION_KEYS=""  
+    CONFIG_DEBUG_INFO_BTF=n      
+    ```
+    and following commands in terminal,  
+    ```bash
+    scripts/config --disable SYSTEM_TRUSTED_KEYS
+    scripts/config --disable SYSTEM_REVOCATION_KEYS
+    ```
+    and then compile the kernel again.
+
+    ---    
+    After compiling the kernel, we can install the kernel with:
+    ```bash
+    sudo make install
+    ```
+    Add successful compilation and installation of kernel, provide realtime access to the user by adding them to rt group
+
+    ```bash
+    sudo addgroup rt
+    sudo usermod -a -G rt $(whoami)
+    ```
+   Afterwords, add following limits to `rt` group in `/etc/security/limits.conf`:
+
    ```bash
-     make - `nproc`
+   @rt soft rtprio 99
+   @rt soft priority 99
+   @rt soft memlock 102400
+   @rt hard rtprio 99
+   @rt hard priority 99
+   @rt hard memlock 102400 
    ```
- 
+   and then reboot your PC with,
+
+   ```bash
+   reboot
+   ```
 ## Installation
 
 Follow these steps to install the necessary packages and dependencies:
@@ -162,7 +214,26 @@ Follow these steps to install the necessary packages and dependencies:
 
 ## Usage
 
-To start using the Panda arm with ROS2, follow these steps:
+In order to work with robot, we should know IP address to establish a connection with robot. To check that please take following steps:
+
+1. Connect LAN cable coming from Robotic arm directly to your PC and visit following web-address in your web-browser:
+   ```
+   robot.franka.de
+   ```
+    If you are logging in for the first time, you should trust the website certificate and Desk interface looks like following:
+
+    ![INEDIOJDOIEJDIO](https://github.com) 
+
+   Now, On top right corner of Desk interface, there would be a drop-down menu;Open Settings and Go to Dashboard.
+   You will see something like this there.
+
+   Inside Network, IP address of Shop Floor is `<fci-ip>` in our case.
+
+2. ROS2 Interface:
+
+    If we want to work with ROS2 and Panda arm, We should enable FCI in Desk interface. For that go to Homepage of Desk interface and Click on Activate FCI inside the settings.
+
+
 
 1. **Source the workspace:**
     ```bash
@@ -176,7 +247,7 @@ To start using the Panda arm with ROS2, follow these steps:
 
 3. **Control the robot:**
     Open the new terminal,
-   ```bash
+    ```bash
     ros2 launch franka_moveit_config moveit.launch.py robot_ip:=<fci-ip>
     ```
 
