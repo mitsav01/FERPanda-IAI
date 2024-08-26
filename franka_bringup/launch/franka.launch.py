@@ -59,10 +59,11 @@ def generate_launch_description():
     return LaunchDescription([
         DeclareLaunchArgument(
             robot_ip_parameter_name,
+            default_value='192.168.101.116',
             description='Hostname or IP address of the robot.'),
         DeclareLaunchArgument(
             use_rviz_parameter_name,
-            default_value='false',
+            default_value='true',
             description='Visualize the robot in Rviz'),
         DeclareLaunchArgument(
             use_fake_hardware_parameter_name,

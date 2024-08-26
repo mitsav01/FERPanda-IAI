@@ -27,8 +27,8 @@ from launch.substitutions import Command, FindExecutable, LaunchConfiguration, P
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
 import yaml
-
-
+from moveit_configs_utils import MoveItConfigsBuilder
+    
 def load_yaml(package_name, file_path):
     package_path = get_package_share_directory(package_name)
     absolute_file_path = os.path.join(package_path, file_path)
@@ -50,9 +50,8 @@ def generate_launch_description():
     use_fake_hardware = LaunchConfiguration(use_fake_hardware_parameter_name)
     load_gripper = LaunchConfiguration(load_gripper_parameter_name)
     fake_sensor_commands = LaunchConfiguration(fake_sensor_commands_parameter_name)
-
-
-    # Command-line arguments
+    
+   # Command-line arguments
 
     db_arg = DeclareLaunchArgument(
         'db', default_value='False', description='Database flag'
@@ -78,8 +77,32 @@ def generate_launch_description():
         'robot_description_semantic': robot_description_semantic_config
     }
 
-    kinematics_yaml = load_yaml(
-        'franka_moveit_config', 'config/kinematics.yaml'
+    # MoveIt configuration
+    moveit_config = (
+        MoveItConfigsBuilder("pd")
+        .robot_description(
+            file_path=franka_xacro_file,
+            mappings={
+                "hand": LaunchConfiguration('load_gripper'),
+                "robot_ip": LaunchConfiguration('robot_ip'),
+                "use_fake_hardware": LaunchConfiguration('use_fake_hardware'),
+                "fake_sensor_commands": LaunchConfiguration('fake_sensor_commands')
+            }
+        )
+        .robot_description_semantic(
+            file_path=franka_semantic_xacro_file,
+            mappings={
+                "hand": LaunchConfiguration('load_gripper')
+            }
+        )
+        .planning_scene_monitor(
+            publish_robot_description=True, publish_robot_description_semantic=True
+        )
+        .trajectory_execution(file_path="config/gripper_moveit_controllers.yaml")
+        .planning_pipelines(
+            pipelines=["ompl", "chomp", "pilz_industrial_motion_planner", "stomp"]
+        )
+        .to_moveit_configs()
     )
 
     # Planning Functionality
@@ -100,61 +123,41 @@ def generate_launch_description():
     )
     ompl_planning_pipeline_config['move_group'].update(ompl_planning_yaml)
 
-    # Trajectory Execution Functionality
-    moveit_simple_controllers_yaml = load_yaml(
-        'franka_moveit_config', 'config/panda_controllers.yaml'
+
+    # Static TF
+    static_tf_node = Node(
+        package="tf2_ros",
+        executable="static_transform_publisher",
+        name="static_transform_publisher",
+        output="log",
+        arguments=["0.0", "0.0", "0.0", "0.0", "0.0", "0.0", "world", "panda_link0"],
     )
-    moveit_controllers = {
-        'moveit_simple_controller_manager': moveit_simple_controllers_yaml,
-        'moveit_controller_manager': 'moveit_simple_controller_manager'
-                                     '/MoveItSimpleControllerManager',
-    }
-
-    trajectory_execution = {
-        'moveit_manage_controllers': True,
-        'trajectory_execution.allowed_execution_duration_scaling': 1.2,
-        'trajectory_execution.allowed_goal_duration_margin': 0.5,
-        'trajectory_execution.allowed_start_tolerance': 0.01,
-    }
-
-    planning_scene_monitor_parameters = {
-        'publish_planning_scene': True,
-        'publish_geometry_updates': True,
-        'publish_state_updates': True,
-        'publish_transforms_updates': True,
-    }
-
     # Start the actual move_group node/action server
     run_move_group_node = Node(
-        package='moveit_ros_move_group',
-        executable='move_group',
-        output='screen',
-        parameters=[
-            robot_description,
-            robot_description_semantic,
-            kinematics_yaml,
-            ompl_planning_pipeline_config,
-            trajectory_execution,
-            moveit_controllers,
-            planning_scene_monitor_parameters,
-        ],
+        package="moveit_ros_move_group",
+        executable="move_group",
+        output="screen",
+        parameters=[moveit_config.to_dict()],
+        arguments=["--ros-args", "--log-level", "info"],
     )
+
 
     # RViz
     rviz_base = os.path.join(get_package_share_directory('franka_moveit_config'), 'rviz')
     rviz_full_config = os.path.join(rviz_base, 'moveit.rviz')
 
     rviz_node = Node(
-        package='rviz2',
-        executable='rviz2',
-        name='rviz2',
-        output='log',
-        arguments=['-d', rviz_full_config],
+        package="rviz2",
+        executable="rviz2",
+        name="rviz2",
+        output="log",
+        arguments=["-d", rviz_full_config],
         parameters=[
-            robot_description,
-            robot_description_semantic,
-            ompl_planning_pipeline_config,
-            kinematics_yaml,
+            moveit_config.robot_description,
+            moveit_config.robot_description_semantic,
+            moveit_config.planning_pipelines,
+            moveit_config.robot_description_kinematics,
+            moveit_config.joint_limits,
         ],
     )
 
@@ -164,7 +167,7 @@ def generate_launch_description():
         executable='robot_state_publisher',
         name='robot_state_publisher',
         output='both',
-        parameters=[robot_description],
+        parameters=[moveit_config.robot_description],
     )
 
     ros2_controllers_path = os.path.join(
@@ -175,7 +178,7 @@ def generate_launch_description():
     ros2_control_node = Node(
         package='controller_manager',
         executable='ros2_control_node',
-        parameters=[robot_description, ros2_controllers_path],
+        parameters=[moveit_config.robot_description, ros2_controllers_path],
         remappings=[('joint_states', 'franka/joint_states')],
         output={
             'stdout': 'screen',
@@ -194,7 +197,7 @@ def generate_launch_description():
                 output='screen',
             )
         ]
-
+    print(moveit_config.joint_limits)
     # Warehouse mongodb server
     db_config = LaunchConfiguration('db')
     mongodb_server_node = Node(
@@ -224,12 +227,13 @@ def generate_launch_description():
         use_fake_hardware_parameter_name,
         default_value='false',
         description='Use fake hardware')
-    load_gripper_arg = DeclareLaunchArgument(
-            load_gripper_parameter_name,
-            default_value='false',
-            description='Use Franka Gripper as an end-effector, otherwise, the robot is loaded '
-                        'without an end-effector.')
-    
+
+    panda_hand_controller_spawner = Node(
+        package="controller_manager",
+        executable="spawner",
+        arguments=["panda_hand_controller", "-c", "/controller_manager"],
+    )
+   
     fake_sensor_commands_arg = DeclareLaunchArgument(
         fake_sensor_commands_parameter_name,
         default_value='false',
@@ -242,19 +246,25 @@ def generate_launch_description():
                           use_fake_hardware_parameter_name: use_fake_hardware}.items(),
         condition=IfCondition(load_gripper)
     )
+    load_gripper_arg = DeclareLaunchArgument(
+        load_gripper_parameter_name,
+        default_value='true',
+        description='Use Franka Gripper as an end-effector, otherwise, the robot is loaded without an end-effector.')
     return LaunchDescription(
         [robot_arg,
          use_fake_hardware_arg,
          fake_sensor_commands_arg,
          load_gripper_arg,
          db_arg,
+         static_tf_node,
          rviz_node,
          robot_state_publisher,
          run_move_group_node,
          ros2_control_node,
          mongodb_server_node,
          joint_state_publisher,
-         gripper_launch_file
+         gripper_launch_file,
+         panda_hand_controller_spawner
          ]
         + load_controllers
     )
