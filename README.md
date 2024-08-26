@@ -222,17 +222,17 @@ In order to work with robot, we should know IP address to establish a connection
    ```
     If you are logging in for the first time, you should trust the website certificate and Desk interface looks like following:
 
-    ![INEDIOJDOIEJDIO](https://github.com) 
+    ![Homepage](https://github.com/mitsav01/FERPanda-IAI/blob/965b8312fa0bbb1a35fc18bcdd5559481de5bc93/images/Homepage.png) 
 
    Now, On top right corner of Desk interface, there would be a drop-down menu;Open Settings and Go to Dashboard.
    You will see something like this there.
-
+    ![Dashboard](https://github.com/mitsav01/FERPanda-IAI/blob/965b8312fa0bbb1a35fc18bcdd5559481de5bc93/images/Dashboard.png) 
    Inside Network, IP address of Shop Floor is `<fci-ip>` in our case.
 
 2. ROS2 Interface:
 
     If we want to work with ROS2 and Panda arm, We should enable FCI in Desk interface. For that go to Homepage of Desk interface and Click on Activate FCI inside the settings.
-
+    ![FCI](https://github.com/mitsav01/FERPanda-IAI/blob/965b8312fa0bbb1a35fc18bcdd5559481de5bc93/images/FCI-activation.png) 
 
 
 1. **Source the workspace:**
@@ -266,4 +266,4 @@ If you encounter any issues, please refer to the following resources:
 
 
 
-* This readme file is still in progress.
+*This readme file is still in progress.
